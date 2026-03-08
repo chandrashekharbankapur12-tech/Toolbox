@@ -5,9 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Toolbox</title>
 
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#131313">
+    <link rel="icon" type="image/png" href="photo.png">
     <link rel="apple-touch-icon" href="photo.png">
+    
+    <link rel="manifest" href='data:application/manifest+json,{"name":"Toolbox","short_name":"Toolbox","start_url":".","display":"standalone","background_color":"#131313","theme_color":"#007AFF","icons":[{"src":"photo.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}'>
+    
+    <meta name="theme-color" content="#131313">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
@@ -57,11 +62,11 @@
             min-height: 100vh;
         }
 
-        /* --- LOGO STYLE --- */
+        /* Logo display on Website */
         .app-logo {
             width: 80px;
             height: 80px;
-            border-radius: 20px; /* iOS style rounded corners */
+            border-radius: 20px;
             margin: 0 auto 15px;
             display: block;
             object-fit: cover;
@@ -191,8 +196,9 @@
 </div>
 
 <script>
+    // Fake Service Worker for PWA compliance
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
+        navigator.serviceWorker.register('data:text/javascript,self.addEventListener("fetch", (e) => {});');
     }
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
@@ -222,7 +228,7 @@
         } catch (err) { status.innerText = "Error!"; console.error(err); }
     }
 
-    // Logic remains same for PDF operations
+    // PDF Functions (Same)
     async function jpgToPdf(fileList) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
