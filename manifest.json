@@ -1,20 +1,20 @@
 {
   "name": "Toolbox Pro",
   "short_name": "Toolbox",
-  "description": "Professional PDF and Image Utility Suite",
+  "description": "Professional PDF Utility",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#131313",
   "theme_color": "#007AFF",
   "icons": [
     {
-      "src": "photo.png?v=2",
+      "src": "photo.png?v=3",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "photo.png?v=2",
+      "src": "photo.png?v=3",
       "sizes": "192x192",
       "type": "image/png"
     }
