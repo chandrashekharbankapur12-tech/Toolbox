@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Toolbox</title>
-
-    <link rel="manifest" href="manifest.json?v=3">
-    <link rel="apple-touch-icon" href="photo.png?v=3">
-    <link rel="icon" type="image/png" href="photo.png?v=3">
+    <title>Toolbox Pro</title>
+    
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#131313">
+    <link rel="apple-touch-icon" href="photo.png">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 
     <style>
-        :root { --ios-blue: #007AFF; --ios-gray: #8E8E93; --glass: rgba(255, 255, 255, 0.1); }
+        :root { --ios-blue: #007AFF; --ios-red: #FF3B30; --ios-gray: #8E8E93; --glass: rgba(255, 255, 255, 0.1); }
         html, body { height: 100%; overflow: hidden; position: fixed; width: 100%; margin: 0; background: #131313; }
         body {
             font-family: -apple-system, system-ui, sans-serif;
@@ -30,10 +29,14 @@
         .row { padding: 18px 16px; display: flex; justify-content: space-between; align-items: center; }
         .label { font-size: 15px; color: #ddd; }
         .select-style, .input-style { color: var(--ios-blue); font-weight: 600; background: none; border: none; outline: none; font-size: 16px; text-align: right; }
-        .main-btn { background: var(--ios-blue); color: white; border: none; padding: 18px; border-radius: 20px; width: 100%; font-size: 18px; font-weight: 600; margin-top: 10px; box-shadow: 0 8px 20px rgba(0,122,255,0.3); }
+        .main-btn { background: var(--ios-blue); color: white; border: none; padding: 18px; border-radius: 20px; width: 100%; font-size: 18px; font-weight: 600; margin-top: 10px; box-shadow: 0 8px 20px rgba(0,122,255,0.3); transition: all 0.3s ease; cursor: pointer; }
         #fileInput { display: none; }
         #pageRow { display: none; border-top: 1px solid rgba(255,255,255,0.05); }
-        #status { margin-top: 20px; color: var(--ios-gray); font-size: 13px; height: 20px; }
+        
+        .progress-box { margin-top: 20px; display: none; }
+        .progress-bar-bg { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+        #progressBar { width: 0%; height: 100%; background: var(--ios-blue); transition: width 0.3s ease; }
+        #status { color: var(--ios-gray); font-size: 13px; }
     </style>
 </head>
 <body>
@@ -47,7 +50,7 @@
             <span class="label">Action</span>
             <select id="toolSelect" class="select-style" onchange="updateUI()">
                 <option value="jpgToPdf">JPG to PDF</option>
-                <option value="compress">Compress (50%)</option>
+                <option value="compress">Fast Compress</option>
                 <option value="pdfToJpg">PDF to JPG</option>
             </select>
         </div>
@@ -58,23 +61,31 @@
     </div>
 
     <div class="section">
-        <label for="fileInput" class="row" style="flex-direction: column; align-items: center;">
+        <label for="fileInput" class="row" style="flex-direction: column; align-items: center; cursor: pointer;">
             <div style="color: var(--ios-blue); font-weight: 600; font-size: 17px;">Choose Files</div>
             <div id="fileCount" style="font-size: 12px; color: var(--ios-gray); margin-top: 4px;">No files selected</div>
         </label>
         <input type="file" id="fileInput" multiple onchange="updateCount()">
     </div>
 
-    <button class="main-btn" onclick="start()">Start Process</button>
-    <div id="status">Ready</div>
+    <button id="actionBtn" class="main-btn" onclick="handleButtonClick()">Start Process</button>
+    
+    <div class="progress-box" id="progressBox">
+        <div class="progress-bar-bg"><div id="progressBar"></div></div>
+        <div id="status">Ready</div>
+    </div>
 </div>
 
 <script>
+    // Register Service Worker
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=3'); });
+        navigator.serviceWorker.register('sw.js');
     }
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+    let isProcessing = false;
+    let shouldStop = false;
 
     function updateUI() {
         document.getElementById('pageRow').style.display = (document.getElementById('toolSelect').value === 'pdfToJpg') ? 'flex' : 'none';
@@ -85,17 +96,86 @@
         document.getElementById('fileCount').innerText = files.length > 0 ? `${files.length} file(s) selected` : "No files selected";
     }
 
-    async function start() {
+    function updateProgress(pct, text) {
+        document.getElementById('progressBox').style.display = 'block';
+        document.getElementById('progressBar').style.width = pct + '%';
+        document.getElementById('status').innerText = text;
+    }
+
+    async function handleButtonClick() {
+        const btn = document.getElementById('actionBtn');
         const files = document.getElementById('fileInput').files;
+
+        if (!isProcessing) {
+            if (files.length === 0) return alert("Select files!");
+            
+            isProcessing = true;
+            shouldStop = false;
+            btn.innerText = "Stop Process";
+            btn.style.background = "var(--ios-red)";
+            
+            await startTask(files);
+            resetUI();
+        } else {
+            shouldStop = true;
+            updateProgress(0, "Stopping...");
+        }
+    }
+
+    function resetUI() {
+        const btn = document.getElementById('actionBtn');
+        isProcessing = false;
+        shouldStop = false;
+        btn.innerText = "Start Process";
+        btn.style.background = "var(--ios-blue)";
+    }
+
+    async function startTask(files) {
         const tool = document.getElementById('toolSelect').value;
-        if (files.length === 0) return alert("Select files!");
-        document.getElementById('status').innerText = "Processing...";
         try {
-            if (tool === 'jpgToPdf') await jpgToPdf(files);
-            else if (tool === 'compress') await compress(files[0]);
+            if (tool === 'compress') await fastCompress(files[0]);
+            else if (tool === 'jpgToPdf') await jpgToPdf(files);
             else if (tool === 'pdfToJpg') await pdfToJpg(files[0]);
-            document.getElementById('status').innerText = "Done!";
-        } catch (e) { document.getElementById('status').innerText = "Error!"; }
+            
+            if (!shouldStop) {
+                updateProgress(100, "Completed!");
+                setTimeout(() => { document.getElementById('progressBox').style.display = 'none'; }, 2000);
+            } else {
+                updateProgress(0, "Process Cancelled");
+            }
+        } catch (e) { 
+            console.error(e);
+            updateProgress(0, "Error Occurred!"); 
+        }
+    }
+
+    async function fastCompress(file) {
+        updateProgress(10, "Opening PDF...");
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+        const outPdf = await PDFLib.PDFDocument.create();
+        const total = pdf.numPages;
+
+        for (let i = 1; i <= total; i++) {
+            if (shouldStop) return;
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({ scale: 1.0 });
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.height = viewport.height; canvas.width = viewport.width;
+
+            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+            const imgData = canvas.toDataURL('image/jpeg', 0.4); // Quality set to 40% for compression
+            const img = await outPdf.embedJpg(imgData);
+            const newPage = outPdf.addPage([img.width, img.height]);
+            newPage.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+            
+            updateProgress(10 + (i / total * 80), `Compressing page ${i}/${total}...`);
+        }
+
+        if (shouldStop) return;
+        const bytes = await outPdf.save();
+        download(bytes, "compressed.pdf", "application/pdf");
     }
 
     async function jpgToPdf(fileList) {
@@ -103,12 +183,14 @@
         const doc = new jsPDF();
         const files = Array.from(fileList);
         for (let i = 0; i < files.length; i++) {
+            if (shouldStop) return;
+            updateProgress((i/files.length)*100, `Adding Image ${i+1}...`);
             const data = await readFile(files[i]);
             if (i > 0) doc.addPage();
             const props = doc.getImageProperties(data);
             doc.addImage(data, 'JPEG', 0, 0, 210, (props.height * 210) / props.width);
         }
-        doc.save("merged.pdf");
+        if (!shouldStop) doc.save("merged.pdf");
     }
 
     async function pdfToJpg(file) {
@@ -117,32 +199,27 @@
         const input = document.getElementById('pageNumbers').value;
         let selected = input.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n) && n > 0 && n <= pdf.numPages);
         if (selected.length === 0) selected = Array.from({length: pdf.numPages}, (_, i) => i + 1);
-        for (const num of selected) {
+
+        for (let i = 0; i < selected.length; i++) {
+            if (shouldStop) return;
+            const num = selected[i];
+            updateProgress((i/selected.length)*100, `Exporting JPG ${num}...`);
             const page = await pdf.getPage(num);
             const vp = page.getViewport({ scale: 2 });
             const canvas = document.createElement('canvas');
+            canvas.height = vp.height; canvas.width = vp.width;
             await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
             const a = document.createElement('a'); a.href = canvas.toDataURL('image/jpeg', 0.9); a.download = `page_${num}.jpg`; a.click();
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 300));
         }
     }
 
-    async function compress(file) {
-        const { PDFDocument } = PDFLib;
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-        const outPdf = await PDFDocument.create();
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const vp = page.getViewport({ scale: 2 });
-            const canvas = document.createElement('canvas');
-            await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
-            const img = await outPdf.embedJpg(canvas.toDataURL('image/jpeg', 0.7));
-            const newPage = outPdf.addPage([img.width/2, img.height/2]);
-            newPage.drawImage(img, { x: 0, y: 0, width: img.width/2, height: img.height/2 });
-        }
-        const bytes = await outPdf.save();
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes])); a.download = "compressed.pdf"; a.click();
+    function download(bytes, name, type) {
+        const blob = new Blob([bytes], { type: type });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = name; a.click();
+        URL.revokeObjectURL(url);
     }
 
     function readFile(file) { return new Promise(r => { const f = new FileReader(); f.onload = e => r(e.target.result); f.readAsDataURL(file); }); }
