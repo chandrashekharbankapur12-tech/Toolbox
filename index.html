@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Toolbox</title>
 
     <link rel="manifest" href="manifest.json">
@@ -21,6 +21,14 @@
             --glass: rgba(255, 255, 255, 0.1);
         }
 
+        /* Prevent shaking and scrolling issues */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #131313;
@@ -33,9 +41,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
             margin: 0;
             color: var(--text-light);
+            -webkit-font-smoothing: antialiased;
         }
 
         .wrapper {
@@ -43,6 +51,12 @@
             max-width: 340px;
             text-align: center;
             padding: 20px;
+            box-sizing: border-box;
+            /* Stable container */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 100vh;
         }
 
         h2 {
@@ -50,29 +64,18 @@
             font-weight: 700;
             margin-bottom: 30px;
             letter-spacing: -0.6px;
+            margin-top: 0;
         }
 
-        /* Install Button - Hidden by default */
-        #installBtn {
-            background-color: #34C759;
-            display: none;
-            margin-bottom: 25px;
-            border-radius: 18px;
-            padding: 16px;
-            color: white;
-            border: none;
-            font-weight: 600;
-            width: 100%;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(52, 199, 89, 0.3);
-        }
-
+        /* Sections are stable and don't expand unexpectedly */
         .section {
             background: var(--glass);
             border-radius: 18px;
             margin-bottom: 20px;
             overflow: hidden;
             border: 1px solid rgba(255,255,255,0.1);
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .clickable-row {
@@ -81,12 +84,15 @@
             padding: 20px 16px;
             box-sizing: border-box;
             cursor: pointer;
+            text-decoration: none;
+            color: inherit;
         }
 
         .row-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            height: 24px; /* Fixed height for stability */
         }
 
         .title-label { font-size: 15px; color: #ccc; }
@@ -100,6 +106,7 @@
             outline: none;
             -webkit-appearance: none;
             text-align: right;
+            cursor: pointer;
         }
 
         .page-input-box {
@@ -110,6 +117,7 @@
             font-size: 16px;
             width: 100px;
             outline: none;
+            border-radius: 4px;
         }
 
         .main-btn {
@@ -124,20 +132,30 @@
             cursor: pointer;
             margin-top: 10px;
             box-shadow: 0 8px 20px rgba(0,122,255,0.3);
+            transition: transform 0.1s;
         }
 
-        .main-btn:active { transform: scale(0.96); }
+        .main-btn:active { transform: scale(0.97); }
 
         #fileInput { display: none; }
-        #pageRow { display: none; border-top: 1px solid rgba(255,255,255,0.05); }
-        #status { margin-top: 20px; color: var(--ios-gray); font-size: 14px; }
+
+        /* Smooth visibility for page selection */
+        #pageRow { 
+            display: none; 
+            border-top: 1px solid rgba(255,255,255,0.05); 
+        }
+
+        #status { 
+            margin-top: 20px; 
+            color: var(--ios-gray); 
+            font-size: 14px;
+            height: 20px; /* Fixed height to prevent jumping */
+        }
     </style>
 </head>
 <body>
 
 <div class="wrapper">
-    <button id="installBtn" onclick="doInstall()">📥 Install Toolbox</button>
-
     <h2>Toolbox</h2>
     
     <div class="section">
@@ -173,22 +191,7 @@
 </div>
 
 <script>
-    // --- PWA LOGIC ---
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        document.getElementById('installBtn').style.display = 'block';
-    });
-
-    async function doInstall() {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            deferredPrompt = null;
-            document.getElementById('installBtn').style.display = 'none';
-        }
-    }
-
+    // --- PWA LOGIC (Install Button Hataya, par Install functionality on hai) ---
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js');
     }
@@ -197,8 +200,8 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
     function updateUI() {
-        document.getElementById('pageRow').style.display = 
-            (document.getElementById('toolSelect').value === 'pdfToJpg') ? 'block' : 'none';
+        const isPdfToJpg = document.getElementById('toolSelect').value === 'pdfToJpg';
+        document.getElementById('pageRow').style.display = isPdfToJpg ? 'block' : 'none';
     }
 
     function updateCount() {
@@ -221,7 +224,7 @@
         } catch (err) { status.innerText = "Error!"; console.error(err); }
     }
 
-    // Core Processing Functions (Internal)
+    // PDF core functions (Stayed Same)
     async function jpgToPdf(fileList) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
