@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Toolbox</title>
 
-    <link rel="manifest" href='data:application/manifest+json,{"name":"Toolbox Pro","short_name":"Toolbox","start_url":".","display":"standalone","background_color":"#131313","theme_color":"#007AFF","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/2344/2344132.png","sizes":"512x512","type":"image/png"}],"screenshots":[{"src":"https://via.placeholder.com/1080x1920/131313/007AFF?text=Toolbox+Mobile","sizes":"1080x1920","type":"image/png","form_factor":"narrow"},{"src":"https://via.placeholder.com/1920x1080/131313/007AFF?text=Toolbox+Desktop","sizes":"1920x1080","type":"image/png","form_factor":"wide"}]}'>
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#131313">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2344/2344132.png">
 
@@ -21,7 +21,6 @@
             --glass: rgba(255, 255, 255, 0.1);
         }
 
-        /* --- CARBON FIBER BACKGROUND --- */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #131313;
@@ -37,7 +36,6 @@
             min-height: 100vh;
             margin: 0;
             color: var(--text-light);
-            overflow-x: hidden;
         }
 
         .wrapper {
@@ -52,21 +50,21 @@
             font-weight: 700;
             margin-bottom: 30px;
             letter-spacing: -0.6px;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
         }
 
-        /* Install Button (Green) */
+        /* Install Button - Hidden by default */
         #installBtn {
             background-color: #34C759;
             display: none;
             margin-bottom: 25px;
             border-radius: 18px;
-            padding: 15px;
+            padding: 16px;
             color: white;
             border: none;
             font-weight: 600;
             width: 100%;
             cursor: pointer;
+            box-shadow: 0 4px 15px rgba(52, 199, 89, 0.3);
         }
 
         .section {
@@ -75,10 +73,7 @@
             margin-bottom: 20px;
             overflow: hidden;
             border: 1px solid rgba(255,255,255,0.1);
-            transition: transform 0.1s;
         }
-
-        .section:active { transform: scale(0.98); }
 
         .clickable-row {
             display: block;
@@ -86,22 +81,15 @@
             padding: 20px 16px;
             box-sizing: border-box;
             cursor: pointer;
-            text-decoration: none;
-            color: inherit;
         }
 
         .row-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            text-align: left;
         }
 
-        .title-label {
-            font-size: 15px;
-            font-weight: 500;
-            color: #ccc;
-        }
+        .title-label { font-size: 15px; color: #ccc; }
 
         .value-text {
             font-size: 16px;
@@ -114,25 +102,14 @@
             text-align: right;
         }
 
-        #fileInput { display: none; }
-
         .page-input-box {
             background: rgba(0,0,0,0.3);
             border: none;
             color: var(--ios-blue);
             text-align: right;
             font-size: 16px;
-            font-weight: 600;
+            width: 100px;
             outline: none;
-            width: 120px;
-            border-radius: 5px;
-            padding: 4px;
-        }
-
-        .file-status {
-            font-size: 13px;
-            color: var(--ios-gray);
-            margin-top: 6px;
         }
 
         .main-btn {
@@ -145,26 +122,21 @@
             font-size: 18px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
             margin-top: 10px;
             box-shadow: 0 8px 20px rgba(0,122,255,0.3);
         }
 
-        .main-btn:active { transform: scale(0.95); }
+        .main-btn:active { transform: scale(0.96); }
 
-        #status {
-            margin-top: 25px;
-            font-size: 14px;
-            color: var(--ios-gray);
-        }
-
+        #fileInput { display: none; }
         #pageRow { display: none; border-top: 1px solid rgba(255,255,255,0.05); }
+        #status { margin-top: 20px; color: var(--ios-gray); font-size: 14px; }
     </style>
 </head>
 <body>
 
 <div class="wrapper">
-    <button id="installBtn" onclick="installApp()">📥 Install Toolbox App</button>
+    <button id="installBtn" onclick="doInstall()">📥 Install Toolbox</button>
 
     <h2>Toolbox</h2>
     
@@ -172,7 +144,7 @@
         <div class="clickable-row" onclick="document.getElementById('toolSelect').focus()">
             <div class="row-content">
                 <span class="title-label">Action</span>
-                <select id="toolSelect" class="value-text" onchange="updateToolUI()">
+                <select id="toolSelect" class="value-text" onchange="updateUI()">
                     <option value="jpgToPdf">JPG to PDF</option>
                     <option value="compress">Compress (50%)</option>
                     <option value="pdfToJpg">PDF to JPG</option>
@@ -180,10 +152,10 @@
             </div>
         </div>
         
-        <div id="pageRow" class="clickable-row" style="padding: 12px 16px; cursor: default;">
+        <div id="pageRow" class="clickable-row">
             <div class="row-content">
                 <span class="title-label">Pages</span>
-                <input type="text" id="pageNumbers" class="page-input-box" placeholder="e.g. 1, 3, 5">
+                <input type="text" id="pageNumbers" class="page-input-box" placeholder="e.g. 1, 3">
             </div>
         </div>
     </div>
@@ -191,18 +163,17 @@
     <div class="section">
         <label for="fileInput" class="clickable-row">
             <div style="color: var(--ios-blue); font-size: 17px; font-weight: 600;">Choose Files</div>
-            <div id="fileCount" class="file-status">No files selected</div>
+            <div id="fileCount" style="font-size: 13px; color: var(--ios-gray); margin-top: 5px;">No files selected</div>
         </label>
-        <input type="file" id="fileInput" multiple onchange="updateFileCount()">
+        <input type="file" id="fileInput" multiple onchange="updateCount()">
     </div>
 
-    <button class="main-btn" id="startBtn" onclick="startProcess()">Start Process</button>
-    
+    <button class="main-btn" onclick="start()">Start Process</button>
     <div id="status">Ready</div>
 </div>
 
 <script>
-    // --- PWA & Service Worker Logic ---
+    // --- PWA LOGIC ---
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
@@ -210,7 +181,7 @@
         document.getElementById('installBtn').style.display = 'block';
     });
 
-    async function installApp() {
+    async function doInstall() {
         if (deferredPrompt) {
             deferredPrompt.prompt();
             deferredPrompt = null;
@@ -219,116 +190,94 @@
     }
 
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('data:text/javascript,self.addEventListener("fetch", (e) => {});');
+        navigator.serviceWorker.register('sw.js');
     }
 
-    // --- Toolbox Core Logic ---
+    // --- TOOL LOGIC ---
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-    function updateToolUI() {
-        const tool = document.getElementById('toolSelect').value;
-        document.getElementById('pageRow').style.display = (tool === 'pdfToJpg') ? 'block' : 'none';
+    function updateUI() {
+        document.getElementById('pageRow').style.display = 
+            (document.getElementById('toolSelect').value === 'pdfToJpg') ? 'block' : 'none';
     }
 
-    function updateFileCount() {
+    function updateCount() {
         const files = document.getElementById('fileInput').files;
         document.getElementById('fileCount').innerText = files.length > 0 ? `${files.length} file(s) selected` : "No files selected";
     }
 
-    async function startProcess() {
+    async function start() {
         const fileList = document.getElementById('fileInput').files;
         const tool = document.getElementById('toolSelect').value;
         const status = document.getElementById('status');
-        if (fileList.length === 0) return alert("Please select files first!");
+        if (fileList.length === 0) return alert("Select files!");
 
         status.innerText = "Processing...";
         try {
-            if (tool === 'jpgToPdf') await jpgToPdfMultiple(fileList);
-            else if (tool === 'compress') await compressPdf(fileList[0]);
-            else if (tool === 'pdfToJpg') await pdfToJpgSpecific(fileList[0]);
-            if(tool !== 'pdfToJpg') status.innerText = "Done!";
-        } catch (err) { status.innerText = "Error occurred."; console.error(err); }
+            if (tool === 'jpgToPdf') await jpgToPdf(fileList);
+            else if (tool === 'compress') await compress(fileList[0]);
+            else if (tool === 'pdfToJpg') await pdfToJpg(fileList[0]);
+            status.innerText = "Done!";
+        } catch (err) { status.innerText = "Error!"; console.error(err); }
     }
 
-    // PDF to JPG with specific page logic
-    async function pdfToJpgSpecific(file) {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-        const input = document.getElementById('pageNumbers').value;
-        const status = document.getElementById('status');
-        
-        // Parse numbers: "1, 3, 5" -> [1, 3, 5]
-        let selectedPages = input.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n) && n > 0 && n <= pdf.numPages);
-        if (selectedPages.length === 0) selectedPages = Array.from({length: pdf.numPages}, (_, i) => i + 1);
-
-        for (const pageNum of selectedPages) {
-            status.innerText = `Converting Page ${pageNum}...`;
-            const page = await pdf.getPage(pageNum);
-            const vp = page.getViewport({ scale: 2 });
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.height = vp.height; canvas.width = vp.width;
-            await page.render({ canvasContext: ctx, viewport: vp }).promise;
-            
-            await new Promise((resolve) => {
-                canvas.toBlob((blob) => {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url; a.download = `page_${pageNum}.jpg`;
-                    a.click();
-                    setTimeout(resolve, 1000); 
-                }, 'image/jpeg', 0.9);
-            });
-        }
-        status.innerText = "All requested pages downloaded!";
-    }
-
-    async function jpgToPdfMultiple(fileList) {
+    // Core Processing Functions (Internal)
+    async function jpgToPdf(fileList) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         const files = Array.from(fileList);
         for (let i = 0; i < files.length; i++) {
-            const imageData = await readFileAsDataURL(files[i]);
+            const data = await readFile(files[i]);
             if (i > 0) doc.addPage();
-            const props = doc.getImageProperties(imageData);
+            const props = doc.getImageProperties(data);
             const w = doc.internal.pageSize.getWidth();
-            const h = (props.height * w) / props.width;
-            doc.addImage(imageData, 'JPEG', 0, 0, w, h);
+            doc.addImage(data, 'JPEG', 0, 0, w, (props.height * w) / props.width);
         }
-        doc.save("toolbox_merged.pdf");
+        doc.save("merged.pdf");
     }
 
-    async function compressPdf(file) {
+    async function compress(file) {
         const { PDFDocument } = PDFLib;
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
         const outPdf = await PDFDocument.create();
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
-            const vp = page.getViewport({ scale: 2.1 });
+            const vp = page.getViewport({ scale: 2 });
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.height = vp.height; canvas.width = vp.width;
             await page.render({ canvasContext: ctx, viewport: vp }).promise;
-            const img = await outPdf.embedJpg(canvas.toDataURL('image/jpeg', 0.75));
-            const newPage = outPdf.addPage([img.width/2.1, img.height/2.1]);
-            newPage.drawImage(img, { x: 0, y: 0, width: img.width/2.1, height: img.height/2.1 });
+            const img = await outPdf.embedJpg(canvas.toDataURL('image/jpeg', 0.7));
+            const newPage = outPdf.addPage([img.width/2, img.height/2]);
+            newPage.drawImage(img, { x: 0, y: 0, width: img.width/2, height: img.height/2 });
         }
         const bytes = await outPdf.save();
-        triggerDownload(bytes, "toolbox_compressed.pdf");
-    }
-
-    function readFileAsDataURL(file) {
-        return new Promise((r) => { const reader = new FileReader(); reader.onload = (e) => r(e.target.result); reader.readAsDataURL(file); });
-    }
-
-    function triggerDownload(bytes, filename) {
         const blob = new Blob([bytes], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = filename;
-        a.click();
+        a.href = URL.createObjectURL(blob); a.download = "compressed.pdf"; a.click();
     }
+
+    async function pdfToJpg(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+        const input = document.getElementById('pageNumbers').value;
+        let selected = input.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n) && n > 0 && n <= pdf.numPages);
+        if (selected.length === 0) selected = Array.from({length: pdf.numPages}, (_, i) => i + 1);
+
+        for (const num of selected) {
+            const page = await pdf.getPage(num);
+            const vp = page.getViewport({ scale: 2 });
+            const canvas = document.createElement('canvas');
+            canvas.height = vp.height; canvas.width = vp.width;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/jpeg', 0.9); a.download = `page_${num}.jpg`; a.click();
+            await new Promise(r => setTimeout(r, 500));
+        }
+    }
+
+    function readFile(file) { return new Promise((r) => { const reader = new FileReader(); reader.onload = (e) => r(e.target.result); reader.readAsDataURL(file); }); }
 </script>
 </body>
 </html>
