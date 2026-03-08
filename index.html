@@ -7,7 +7,7 @@
 
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#131313">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2344/2344132.png">
+    <link rel="apple-touch-icon" href="photo.png">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
@@ -21,7 +21,6 @@
             --glass: rgba(255, 255, 255, 0.1);
         }
 
-        /* Prevent shaking and scrolling issues */
         html, body {
             height: 100%;
             overflow: hidden;
@@ -52,11 +51,22 @@
             text-align: center;
             padding: 20px;
             box-sizing: border-box;
-            /* Stable container */
             display: flex;
             flex-direction: column;
             justify-content: center;
             min-height: 100vh;
+        }
+
+        /* --- LOGO STYLE --- */
+        .app-logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px; /* iOS style rounded corners */
+            margin: 0 auto 15px;
+            display: block;
+            object-fit: cover;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
         h2 {
@@ -67,7 +77,6 @@
             margin-top: 0;
         }
 
-        /* Sections are stable and don't expand unexpectedly */
         .section {
             background: var(--glass);
             border-radius: 18px;
@@ -92,7 +101,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 24px; /* Fixed height for stability */
+            height: 24px;
         }
 
         .title-label { font-size: 15px; color: #ccc; }
@@ -138,24 +147,15 @@
         .main-btn:active { transform: scale(0.97); }
 
         #fileInput { display: none; }
-
-        /* Smooth visibility for page selection */
-        #pageRow { 
-            display: none; 
-            border-top: 1px solid rgba(255,255,255,0.05); 
-        }
-
-        #status { 
-            margin-top: 20px; 
-            color: var(--ios-gray); 
-            font-size: 14px;
-            height: 20px; /* Fixed height to prevent jumping */
-        }
+        #pageRow { display: none; border-top: 1px solid rgba(255,255,255,0.05); }
+        #status { margin-top: 20px; color: var(--ios-gray); font-size: 14px; height: 20px; }
     </style>
 </head>
 <body>
 
 <div class="wrapper">
+    <img src="photo.png" alt="Logo" class="app-logo" onerror="this.style.display='none'">
+    
     <h2>Toolbox</h2>
     
     <div class="section">
@@ -191,12 +191,10 @@
 </div>
 
 <script>
-    // --- PWA LOGIC (Install Button Hataya, par Install functionality on hai) ---
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js');
     }
 
-    // --- TOOL LOGIC ---
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
     function updateUI() {
@@ -224,7 +222,7 @@
         } catch (err) { status.innerText = "Error!"; console.error(err); }
     }
 
-    // PDF core functions (Stayed Same)
+    // Logic remains same for PDF operations
     async function jpgToPdf(fileList) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
