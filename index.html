@@ -5,13 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Toolbox</title>
 
-    <link rel="icon" type="image/png" href="photo.png">
-    <link rel="apple-touch-icon" href="photo.png">
+    <link rel="icon" type="image/png" href="photo.png?v=1">
+    <link rel="apple-touch-icon" href="photo.png?v=1">
     
-    <link rel="manifest" href='data:application/manifest+json,{"name":"Toolbox","short_name":"Toolbox","start_url":".","display":"standalone","background_color":"#131313","theme_color":"#007AFF","icons":[{"src":"photo.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}'>
+    <link rel="manifest" href='data:application/manifest+json,{"name":"Toolbox","short_name":"Toolbox","start_url":"./index.html","display":"standalone","background_color":"#131313","theme_color":"#007AFF","icons":[{"src":"photo.png?v=1","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}'>
     
     <meta name="theme-color" content="#131313">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Toolbox">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -62,7 +64,6 @@
             min-height: 100vh;
         }
 
-        /* Logo display on Website */
         .app-logo {
             width: 80px;
             height: 80px;
@@ -120,7 +121,6 @@
             outline: none;
             -webkit-appearance: none;
             text-align: right;
-            cursor: pointer;
         }
 
         .page-input-box {
@@ -160,9 +160,7 @@
 
 <div class="wrapper">
     <img src="photo.png" alt="Logo" class="app-logo" onerror="this.style.display='none'">
-    
     <h2>Toolbox</h2>
-    
     <div class="section">
         <div class="clickable-row" onclick="document.getElementById('toolSelect').focus()">
             <div class="row-content">
@@ -174,7 +172,6 @@
                 </select>
             </div>
         </div>
-        
         <div id="pageRow" class="clickable-row">
             <div class="row-content">
                 <span class="title-label">Pages</span>
@@ -182,7 +179,6 @@
             </div>
         </div>
     </div>
-
     <div class="section">
         <label for="fileInput" class="clickable-row">
             <div style="color: var(--ios-blue); font-size: 17px; font-weight: 600;">Choose Files</div>
@@ -190,13 +186,11 @@
         </label>
         <input type="file" id="fileInput" multiple onchange="updateCount()">
     </div>
-
     <button class="main-btn" onclick="start()">Start Process</button>
     <div id="status">Ready</div>
 </div>
 
 <script>
-    // Fake Service Worker for PWA compliance
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('data:text/javascript,self.addEventListener("fetch", (e) => {});');
     }
@@ -218,17 +212,15 @@
         const tool = document.getElementById('toolSelect').value;
         const status = document.getElementById('status');
         if (fileList.length === 0) return alert("Select files!");
-
         status.innerText = "Processing...";
         try {
             if (tool === 'jpgToPdf') await jpgToPdf(fileList);
             else if (tool === 'compress') await compress(fileList[0]);
             else if (tool === 'pdfToJpg') await pdfToJpg(fileList[0]);
             status.innerText = "Done!";
-        } catch (err) { status.innerText = "Error!"; console.error(err); }
+        } catch (err) { status.innerText = "Error!"; }
     }
 
-    // PDF Functions (Same)
     async function jpgToPdf(fileList) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
@@ -271,7 +263,6 @@
         const input = document.getElementById('pageNumbers').value;
         let selected = input.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n) && n > 0 && n <= pdf.numPages);
         if (selected.length === 0) selected = Array.from({length: pdf.numPages}, (_, i) => i + 1);
-
         for (const num of selected) {
             const page = await pdf.getPage(num);
             const vp = page.getViewport({ scale: 2 });
