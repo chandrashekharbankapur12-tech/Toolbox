@@ -1,14 +1,18 @@
-</body>
-</html>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Toolbox</title>
+
+    <link rel="manifest" href='data:application/manifest+json,{"name":"Toolbox Pro","short_name":"Toolbox","start_url":".","display":"standalone","background_color":"#131313","theme_color":"#007AFF","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/2344/2344132.png","sizes":"512x512","type":"image/png"}],"screenshots":[{"src":"https://via.placeholder.com/1080x1920/131313/007AFF?text=Toolbox+Mobile","sizes":"1080x1920","type":"image/png","form_factor":"narrow"},{"src":"https://via.placeholder.com/1920x1080/131313/007AFF?text=Toolbox+Desktop","sizes":"1920x1080","type":"image/png","form_factor":"wide"}]}'>
+    <meta name="theme-color" content="#131313">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2344/2344132.png">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+
     <style>
         :root {
             --ios-blue: #007AFF;
@@ -17,6 +21,7 @@
             --glass: rgba(255, 255, 255, 0.1);
         }
 
+        /* --- CARBON FIBER BACKGROUND --- */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #131313;
@@ -32,6 +37,7 @@
             min-height: 100vh;
             margin: 0;
             color: var(--text-light);
+            overflow-x: hidden;
         }
 
         .wrapper {
@@ -47,6 +53,20 @@
             margin-bottom: 30px;
             letter-spacing: -0.6px;
             text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+
+        /* Install Button (Green) */
+        #installBtn {
+            background-color: #34C759;
+            display: none;
+            margin-bottom: 25px;
+            border-radius: 18px;
+            padding: 15px;
+            color: white;
+            border: none;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
         }
 
         .section {
@@ -87,19 +107,26 @@
             font-size: 16px;
             color: var(--ios-blue);
             font-weight: 600;
+            background: none;
+            border: none;
+            outline: none;
+            -webkit-appearance: none;
+            text-align: right;
         }
 
-        #toolSelect, #fileInput { display: none; }
+        #fileInput { display: none; }
 
         .page-input-box {
-            background: rgba(0,0,0,0.2);
+            background: rgba(0,0,0,0.3);
             border: none;
             color: var(--ios-blue);
             text-align: right;
             font-size: 16px;
             font-weight: 600;
             outline: none;
-            width: 100px;
+            width: 120px;
+            border-radius: 5px;
+            padding: 4px;
         }
 
         .file-status {
@@ -108,7 +135,7 @@
             margin-top: 6px;
         }
 
-        button.main-btn {
+        .main-btn {
             background-color: var(--ios-blue);
             color: white;
             border: none;
@@ -119,15 +146,15 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
-            margin-top: 15px;
+            margin-top: 10px;
             box-shadow: 0 8px 20px rgba(0,122,255,0.3);
         }
 
-        button.main-btn:active { transform: scale(0.95); }
+        .main-btn:active { transform: scale(0.95); }
 
         #status {
             margin-top: 25px;
-            font-size: 15px;
+            font-size: 14px;
             color: var(--ios-gray);
         }
 
@@ -137,13 +164,15 @@
 <body>
 
 <div class="wrapper">
+    <button id="installBtn" onclick="installApp()">📥 Install Toolbox App</button>
+
     <h2>Toolbox</h2>
     
-    <div class="section" onclick="document.getElementById('toolSelect').focus(); document.getElementById('toolSelect').click();">
-        <div class="clickable-row">
+    <div class="section">
+        <div class="clickable-row" onclick="document.getElementById('toolSelect').focus()">
             <div class="row-content">
                 <span class="title-label">Action</span>
-                <select id="toolSelect" class="value-text" style="display: block; background: none; border: none; outline: none; -webkit-appearance: none;" onchange="updateToolUI()">
+                <select id="toolSelect" class="value-text" onchange="updateToolUI()">
                     <option value="jpgToPdf">JPG to PDF</option>
                     <option value="compress">Compress (50%)</option>
                     <option value="pdfToJpg">PDF to JPG</option>
@@ -151,10 +180,10 @@
             </div>
         </div>
         
-        <div id="pageRow" class="clickable-row" style="padding: 12px 16px;">
+        <div id="pageRow" class="clickable-row" style="padding: 12px 16px; cursor: default;">
             <div class="row-content">
                 <span class="title-label">Pages</span>
-                <input type="text" id="pageNumbers" class="page-input-box" placeholder="e.g. 1, 3">
+                <input type="text" id="pageNumbers" class="page-input-box" placeholder="e.g. 1, 3, 5">
             </div>
         </div>
     </div>
@@ -167,12 +196,33 @@
         <input type="file" id="fileInput" multiple onchange="updateFileCount()">
     </div>
 
-    <button class="main-btn" id="btn" onclick="startProcess()">Start Process</button>
+    <button class="main-btn" id="startBtn" onclick="startProcess()">Start Process</button>
     
     <div id="status">Ready</div>
 </div>
 
 <script>
+    // --- PWA & Service Worker Logic ---
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('installBtn').style.display = 'block';
+    });
+
+    async function installApp() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt = null;
+            document.getElementById('installBtn').style.display = 'none';
+        }
+    }
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('data:text/javascript,self.addEventListener("fetch", (e) => {});');
+    }
+
+    // --- Toolbox Core Logic ---
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
     function updateToolUI() {
@@ -188,18 +238,49 @@
     async function startProcess() {
         const fileList = document.getElementById('fileInput').files;
         const tool = document.getElementById('toolSelect').value;
-        const btn = document.getElementById('btn');
         const status = document.getElementById('status');
-        if (fileList.length === 0) return alert("Select files first!");
-        btn.disabled = true;
+        if (fileList.length === 0) return alert("Please select files first!");
+
         status.innerText = "Processing...";
         try {
             if (tool === 'jpgToPdf') await jpgToPdfMultiple(fileList);
             else if (tool === 'compress') await compressPdf(fileList[0]);
             else if (tool === 'pdfToJpg') await pdfToJpgSpecific(fileList[0]);
             if(tool !== 'pdfToJpg') status.innerText = "Done!";
-        } catch (err) { status.innerText = "Error occurred."; }
-        btn.disabled = false;
+        } catch (err) { status.innerText = "Error occurred."; console.error(err); }
+    }
+
+    // PDF to JPG with specific page logic
+    async function pdfToJpgSpecific(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+        const input = document.getElementById('pageNumbers').value;
+        const status = document.getElementById('status');
+        
+        // Parse numbers: "1, 3, 5" -> [1, 3, 5]
+        let selectedPages = input.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n) && n > 0 && n <= pdf.numPages);
+        if (selectedPages.length === 0) selectedPages = Array.from({length: pdf.numPages}, (_, i) => i + 1);
+
+        for (const pageNum of selectedPages) {
+            status.innerText = `Converting Page ${pageNum}...`;
+            const page = await pdf.getPage(pageNum);
+            const vp = page.getViewport({ scale: 2 });
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.height = vp.height; canvas.width = vp.width;
+            await page.render({ canvasContext: ctx, viewport: vp }).promise;
+            
+            await new Promise((resolve) => {
+                canvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = `page_${pageNum}.jpg`;
+                    a.click();
+                    setTimeout(resolve, 1000); 
+                }, 'image/jpeg', 0.9);
+            });
+        }
+        status.innerText = "All requested pages downloaded!";
     }
 
     async function jpgToPdfMultiple(fileList) {
@@ -214,7 +295,7 @@
             const h = (props.height * w) / props.width;
             doc.addImage(imageData, 'JPEG', 0, 0, w, h);
         }
-        doc.save("merged.pdf");
+        doc.save("toolbox_merged.pdf");
     }
 
     async function compressPdf(file) {
@@ -234,43 +315,11 @@
             newPage.drawImage(img, { x: 0, y: 0, width: img.width/2.1, height: img.height/2.1 });
         }
         const bytes = await outPdf.save();
-        triggerDownload(bytes, "compressed.pdf");
-    }
-
-    async function pdfToJpgSpecific(file) {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-        const input = document.getElementById('pageNumbers').value;
-        const status = document.getElementById('status');
-        let selectedPages = input.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n) && n > 0 && n <= pdf.numPages);
-        if (selectedPages.length === 0) selectedPages = Array.from({length: pdf.numPages}, (_, i) => i + 1);
-        for (const pageNum of selectedPages) {
-            status.innerText = `Converting Page ${pageNum}...`;
-            const page = await pdf.getPage(pageNum);
-            const vp = page.getViewport({ scale: 2 });
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.height = vp.height; canvas.width = vp.width;
-            await page.render({ canvasContext: ctx, viewport: vp }).promise;
-            await new Promise((resolve) => {
-                canvas.toBlob((blob) => {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url; a.download = `page_${pageNum}.jpg`;
-                    a.click();
-                    setTimeout(resolve, 1000); 
-                }, 'image/jpeg', 0.9);
-            });
-        }
-        status.innerText = "Finished!";
+        triggerDownload(bytes, "toolbox_compressed.pdf");
     }
 
     function readFileAsDataURL(file) {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.readAsDataURL(file);
-        });
+        return new Promise((r) => { const reader = new FileReader(); reader.onload = (e) => r(e.target.result); reader.readAsDataURL(file); });
     }
 
     function triggerDownload(bytes, filename) {
@@ -278,9 +327,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url; a.download = filename;
-        document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
     }
 </script>
 </body>
